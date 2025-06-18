@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Data Analyst Dashboard Gallery</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <audio
+      id="like-sound"
+      src="{{ url_for('static', filename='like-sound.mp3') }}"
+    ></audio>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      integrity="sha512-..."
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+  </head>
+  <body>
+    <header>
+      <!--<h1>📊 Data Analyst Dashboard Gallery</h1>-->
+    </header>
+
+    <nav>
+      <div class="nav-left">
+        <div class="logo">Dashboards Vault</div>
+      </div>
+      <div class="nav-center">
+        <div class="tabs">
+          <button class="tab active" data-filter="All">📁 All</button>
+          <button class="tab" data-filter="Power BI">🔶 Power BI</button>
+          <button class="tab" data-filter="Tableau">🔷 Tableau</button>
+          <button class="tab" data-filter="Excel">🟢 Excel</button>
+          <button class="tab" data-filter="Python">🐍 Python</button>
+        </div>
+      </div>
+      <div class="nav-right">
+        <label class="theme-switch">
+          <input type="checkbox" id="themeSwitch" />
+          <span class="slider"></span>
+        </label>
+        <!-- Portfolio Link -->
+        <a
+          href="https://your-portfolio-link.com"
+          target="_blank"
+          class="portfolio-link"
+        >
+          <span>My Portfolio</span>
+        </a>
+      </div>
+    </nav>
+
+    <!-- Dashboard Cards -->
+    <div class="gallery">
+      {% for d in dashboards %}
+      <div
+        class="dashboard-card"
+        id="{{ d.id }}"
+        data-category="{{ d.category }}"
+      >
+        <div class="card-header">
+          <div class="card-info">
+            <h3>{{ d.title | safe }}</h3>
+            {% if d.timestamp %}
+            <small class="timestamp">📅 {{ d.timestamp.split("T")[0] }}</small>
+            {% endif %}
+          </div>
+
+          <!-- Fullscreen Button -->
+          <button
+            class="fullscreen-btn"
+            onclick="fullscreenIframe('iframe-{{ loop.index }}')"
+            title="Open Fullscreen"
+          >
+            🔎 Fullscreen
+          </button>
+        </div>
+
+        <!-- Copy Link -->
+        <div class="card-actions">
+          <div class="copy-wrapper">
+            <button
+              type="button"
+              class="copylink-btn"
+              onclick="copyDashboardAnchorLink('{{ d.id }}', this)"
+              title="Copy Link"
+            >
+              <i class="fas fa-link"></i> Copy Link
+            </button>
+          </div>
+        </div>
+
+        <!-- Dashboard Preview -->
+        <iframe
+          id="iframe-{{ loop.index }}"
+          src="{{ d.link }}"
+          allowfullscreen
+          loading="lazy"
+        ></iframe>
+
+        <p class="desc">{{ d.desc | safe }}</p>
+        <a href="#" class="read-toggle">Read more...</a>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button
+      id="hidden-admin"
+      onclick="location.href='/login'"
+      style="display: none"
+    >
+      Admin
+    </button>
+
+    <footer>
+      <div class="social-links">
+        <a href="mailto:yourmail@example.com" target="_blank" title="Email">
+          <i class="fas fa-envelope"></i> Email
+        </a>
+        <a href="tel:+911234567890" title="Call">
+          <i class="fas fa-phone"></i> Contact
+        </a>
+        <a href="https://wa.me/911234567890" target="_blank" title="WhatsApp">
+          <i class="fab fa-whatsapp"></i> WhatsApp
+        </a>
+        <a
+          href="https://www.instagram.com/yourusername"
+          target="_blank"
+          title="Instagram"
+        >
+          <i class="fab fa-instagram"></i> Instagram
+        </a>
+        <a
+          href="https://www.linkedin.com/in/yourlinkedin"
+          target="_blank"
+          title="LinkedIn"
+        >
+          <i class="fab fa-linkedin"></i> LinkedIn
+        </a>
+        <a href="https://github.com/yourgithub" target="_blank" title="GitHub">
+          <i class="fab fa-github"></i> GitHub
+        </a>
+      </div>
+      <p>&copy; {{ current_year }} Babu Solutions. All rights reserved.</p>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const body = document.body;
+        const themeSwitch = document.getElementById("themeSwitch");
+
+        // 🌙 Load Theme from Local Storage
+        if (localStorage.getItem("theme") === "dark") {
+          body.classList.add("dark");
+          themeSwitch.checked = true;
+        }
+
+        // 🌞 Toggle Theme
+        if (themeSwitch) {
+          themeSwitch.addEventListener("change", () => {
+            const isDark = themeSwitch.checked;
+            body.classList.toggle("dark", isDark);
+            localStorage.setItem("theme", isDark ? "dark" : "light");
+          });
+        }
+
+        // 🎯 Filter by Category
+        document.querySelectorAll(".tab").forEach((tab) => {
+          tab.addEventListener("click", () => {
+            document
+              .querySelectorAll(".tab")
+              .forEach((t) => t.classList.remove("active"));
+            tab.classList.add("active");
+
+            const selected = tab.dataset.filter;
+            document.querySelectorAll(".dashboard-card").forEach((card) => {
+              const match =
+                selected === "All" || card.dataset.category === selected;
+              card.style.display = match ? "flex" : "none";
+            });
+          });
+        });
+
+        // 📖 Read More Toggle
+        document.querySelectorAll(".dashboard-card").forEach((card) => {
+          const desc = card.querySelector(".desc");
+          const toggle = card.querySelector(".read-toggle");
+
+          if (desc && toggle) {
+            if (desc.scrollHeight <= desc.clientHeight + 5)
+              toggle.style.display = "none";
+
+            toggle.addEventListener("click", (e) => {
+              e.preventDefault();
+              desc.classList.toggle("expanded");
+              toggle.textContent = desc.classList.contains("expanded")
+                ? "Read less"
+                : "Read more...";
+            });
+          }
+        });
+
+        // ⌨️ Secret Admin Shortcut: Ctrl + Alt + L
+        document.addEventListener("keydown", (e) => {
+          if (e.ctrlKey && e.altKey && e.key.toLowerCase() === "l") {
+            const adminBtn = document.getElementById("hidden-admin");
+            if (adminBtn) adminBtn.click();
+          }
+        });
+
+        // 🔗 Auto Scroll to Hash in URL
+        setTimeout(() => {
+          const hash = window.location.hash.slice(1);
+          if (hash) {
+            const target = document.getElementById(hash);
+            if (target) {
+              target.scrollIntoView({ behavior: "smooth", block: "center" });
+              target.classList.add("highlight");
+              setTimeout(() => target.classList.remove("highlight"), 3000);
+            }
+          }
+        }, 500);
+      });
+
+      // 📋 Copy Dashboard Link with Hash
+      function copyDashboardAnchorLink(dashboardId, button) {
+        const baseUrl = `${window.location.origin}${window.location.pathname}`;
+        const fullLink = `${baseUrl}#${dashboardId}`;
+        console.log("Copying full link:", fullLink);
+
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard
+            .writeText(fullLink)
+            .then(() => showCopyFeedback(button, "✅ Copied!"))
+            .catch(() => {
+              fallbackCopyTextToClipboard(fullLink);
+              showCopyFeedback(button, "✅ Copied (fallback)!");
+            });
+        } else {
+          fallbackCopyTextToClipboard(fullLink);
+          showCopyFeedback(button, "✅ Copied (fallback)!");
+        }
+      }
+
+      function showCopyFeedback(button, message) {
+        const existing = button.parentElement.querySelector(".copy-feedback");
+        if (existing) existing.remove();
+
+        const feedback = document.createElement("span");
+        feedback.className = "copy-feedback";
+        feedback.textContent = message;
+        button.parentElement.appendChild(feedback);
+
+        setTimeout(() => feedback.remove(), 2000);
+      }
+
+      function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.top = 0;
+        textArea.style.left = 0;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          document.execCommand("copy");
+          alert("✅ Link copied: " + text);
+        } catch (err) {
+          alert("❌ Copy failed: " + err);
+        }
+
+        document.body.removeChild(textArea);
+      }
+
+      // 🔎 Fullscreen Iframe
+      function fullscreenIframe(id) {
+        const iframe = document.getElementById(id);
+        if (iframe.requestFullscreen) {
+          iframe.requestFullscreen();
+        } else if (iframe.webkitRequestFullscreen) {
+          iframe.webkitRequestFullscreen();
+        } else if (iframe.msRequestFullscreen) {
+          iframe.msRequestFullscreen();
+        } else {
+          alert("❌ Fullscreen not supported in this browser.");
+        }
+      }
+    </script>
+  </body>
+</html>

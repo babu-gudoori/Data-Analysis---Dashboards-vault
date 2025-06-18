@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Panel - Dashboard Manager</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='adminstyle.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      integrity="sha512-..."
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+  </head>
+  <body>
+    <!-- Header -->
+    <div class="header">
+      <div class="title">📊 Dashboard Manager</div>
+      <div class="header-buttons">
+        <form method="POST" action="/save_changes">
+          <button type="submit">💾 Save Changes</button>
+        </form>
+        <form method="GET" action="/logout">
+          <button type="submit">🚪 Logout</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add New Dashboard -->
+    <div class="form-section">
+      <h3>➕ Add New Dashboard</h3>
+      <form method="POST" action="/add_dashboard">
+        <input type="text" name="title" placeholder="Dashboard Title" required />
+
+        <label>
+          <input type="radio" name="input_type" value="link" checked />
+          Paste Link (iframe src)
+        </label>
+        <label>
+          <input type="radio" name="input_type" value="iframe" />
+          Paste Full iframe Code
+        </label>
+
+        <input
+          type="url"
+          name="link"
+          id="linkInput"
+          placeholder="Paste iframe link (https://...)"
+          required
+        />
+
+        <textarea
+          name="iframe_code"
+          id="iframeInput"
+          placeholder="Or paste full iframe embed code here..."
+          style="display: none"
+        ></textarea>
+
+        <textarea name="desc" placeholder="Enter a short description..."></textarea>
+
+        <select name="category" required>
+          <option value="">-- Select Category --</option>
+          <option value="Power BI">🔶 Power BI</option>
+          <option value="Tableau">🔷 Tableau</option>
+          <option value="Excel">🟢 Excel</option>
+          <option value="Python">🐍 Python</option>
+        </select>
+
+        <button type="submit">Add Dashboard</button>
+      </form>
+    </div>
+
+    <!-- Filter Tabs -->
+    <nav class="tabs">
+      <button class="tab active" data-filter="All">📁 All</button>
+      <button class="tab" data-filter="Power BI">🔶 Power BI</button>
+      <button class="tab" data-filter="Tableau">🔷 Tableau</button>
+      <button class="tab" data-filter="Excel">🟢 Excel</button>
+      <button class="tab" data-filter="Python">🐍 Python</button>
+    </nav>
+
+    <!-- Dashboard Cards -->
+    <div class="gallery">
+      {% for d in dashboards %}
+      <div class="dashboard-card" data-category="{{ d.category }}">
+        <div class="card-header">
+          <div class="card-info">
+            <h3>{{ d.title }}</h3>
+            {% if d.timestamp %}
+            <small class="timestamp">📅 {{ d.timestamp.replace("T", " ")[:16] }}</small>
+            {% endif %}
+          </div>
+          <button
+            class="fullscreen-btn"
+            onclick="fullscreenIframe('iframe-{{ loop.index }}')"
+          >
+            🔎 Fullscreen
+          </button>
+        </div>
+
+        <iframe
+          id="iframe-{{ loop.index }}"
+          src="{{ d.link }}"
+          allowfullscreen
+          loading="lazy"
+        ></iframe>
+
+        <p class="desc">
+          {{ d.desc | replace('#', '<span class="hashtag">#') | safe }}
+        </p>
+        <a href="#" class="read-toggle">Read more...</a>
+
+        <!-- Delete Button -->
+        <form
+          method="POST"
+          action="/delete_dashboard/{{ loop.index0 }}"
+          onsubmit="return confirm('Are you sure you want to delete this dashboard?');"
+        >
+          <button type="submit" class="delete-btn"><i class="fas fa-trash"></i> Delete</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="popup {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Scripts -->
+    <script>
+      // Toggle link/iframe input
+      document.querySelectorAll('input[name="input_type"]').forEach((radio) => {
+        radio.addEventListener("change", function () {
+          const isLink = this.value === "link";
+          document.getElementById("linkInput").style.display = isLink ? "block" : "none";
+          document.getElementById("iframeInput").style.display = isLink ? "none" : "block";
+          document.getElementById("linkInput").required = isLink;
+          document.getElementById("iframeInput").required = !isLink;
+        });
+      });
+
+      // Fullscreen function
+      function fullscreenIframe(id) {
+        const iframe = document.getElementById(id);
+        if (iframe.requestFullscreen) iframe.requestFullscreen();
+        else if (iframe.webkitRequestFullscreen) iframe.webkitRequestFullscreen();
+        else if (iframe.msRequestFullscreen) iframe.msRequestFullscreen();
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // Category filtering
+        const tabs = document.querySelectorAll(".tab");
+        const cards = document.querySelectorAll(".dashboard-card");
+
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            const filter = tab.getAttribute("data-filter");
+            cards.forEach((card) => {
+              card.style.display = filter === "All" || card.dataset.category === filter
+                ? "block"
+                : "none";
+            });
+            tabs.forEach((t) => t.classList.remove("active"));
+            tab.classList.add("active");
+          });
+        });
+
+        // Read more toggle
+        document.querySelectorAll(".dashboard-card").forEach((card) => {
+          const desc = card.querySelector(".desc");
+          const toggle = card.querySelector(".read-toggle");
+
+          if (!desc || !toggle) return;
+
+          if (desc.scrollHeight <= desc.clientHeight + 5) {
+            toggle.style.display = "none";
+          }
+
+          toggle.addEventListener("click", (e) => {
+            e.preventDefault();
+            desc.classList.toggle("expanded");
+            toggle.textContent = desc.classList.contains("expanded")
+              ? "Read less"
+              : "Read more...";
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
