@@ -1,8 +1,10 @@
 from flask import Flask, flash, render_template, request, redirect, url_for, session
+from flask_mail import Mail, Message
 from datetime import datetime
 from markupsafe import Markup
 from dotenv import load_dotenv
-import json, os, re, uuid
+from collections import defaultdict
+import json, os, re, uuid, time, secrets
 
 # Load environment variables
 load_dotenv()
@@ -10,9 +12,26 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "default-secret-key")
 
+# Mail configuration
+app.config.update(
+    MAIL_SERVER='smtp.gmail.com',
+    MAIL_PORT=587,
+    MAIL_USE_TLS=True,
+    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
+    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
+    MAIL_DEFAULT_SENDER=os.getenv("MAIL_USERNAME")
+)
+mail = Mail(app)
+
 DATA_FILE = "dashboards.json"
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
+
+# Track failed attempts
+failed_attempts = defaultdict(int)
+blocked_ips = {}
+BLOCK_THRESHOLD = 5
+BLOCK_TIME_SECONDS = 300  # 5 minutes
 
 # ------------------ Utility Functions ------------------ #
 def load_dashboards():
@@ -37,29 +56,74 @@ def generate_dashboard_id(title):
     unique_id = str(uuid.uuid4())[:8]
     return f"{slug}-{unique_id}"
 
+# ------------------ Secure Admin Shortcut ------------------ #
+@app.route('/trigger_admin_shortcut')
+def trigger_admin_shortcut():
+    token = secrets.token_urlsafe(16)
+    session['admin_token'] = token
+    session['admin_token_time'] = int(time.time())
+    return redirect(url_for('login_with_token', token=token))
+
+@app.route('/login/<token>', methods=['GET', 'POST'])
+def login_with_token(token):
+    ip = request.remote_addr
+    now = int(time.time())
+
+    # Block if IP has been flagged
+    if ip in blocked_ips and now - blocked_ips[ip] < BLOCK_TIME_SECONDS:
+        return "❌ Access blocked due to repeated failed attempts. Try again later.", 403
+
+    stored_token = session.get('admin_token')
+    token_time = session.get('admin_token_time')
+
+    if not stored_token or stored_token != token or now - token_time > 20:
+        failed_attempts[ip] += 1
+        if failed_attempts[ip] >= BLOCK_THRESHOLD:
+            blocked_ips[ip] = now
+            failed_attempts[ip] = 0
+            print(f"🚫 IP {ip} blocked for 5 minutes.")
+
+        # Send email alert
+        try:
+            msg = Message(
+                subject="🚨 Failed Admin Shortcut Access",
+                recipients=[os.getenv("MAIL_USERNAME")],
+                body=f"""Failed shortcut access detected:
+IP Address: {ip}
+Token: {token}
+URL Attempted: {request.url}
+Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+            )
+            mail.send(msg)
+        except Exception as e:
+            print("❌ Email alert failed:", e)
+
+        return redirect(url_for('index'))
+
+    # Valid shortcut login
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session['admin'] = True
+            session.pop('admin_token', None)
+            session.pop('admin_token_time', None)
+            session['pending_dashboards'] = load_dashboards()
+            return redirect(url_for('admin'))
+        else:
+            return render_template('login.html', error="Invalid credentials.")
+    return render_template('login.html')
+
 # ------------------ Routes ------------------ #
 @app.route('/')
 def index():
     dashboards = load_dashboards()
     for d in dashboards:
         d['desc'] = format_description(d.get('desc', ''))
-
     dashboards.sort(key=lambda x: x.get("timestamp", "2000-01-01T00:00:00"), reverse=True)
     current_year = datetime.now().year
     return render_template('index.html', dashboards=dashboards, current_year=current_year)
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-            session['admin'] = True
-            session['pending_dashboards'] = load_dashboards()
-            return redirect(url_for('admin'))
-        else:
-            return render_template('login.html', error="Invalid credentials.")
-    return render_template('login.html')
 
 @app.route('/admin')
 def admin():
