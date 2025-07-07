@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <title>Data Analyst Dashboard Gallery</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Website Icon -->
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='images/website-icon.png') }}"
+    />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
@@ -20,7 +26,6 @@
       referrerpolicy="no-referrer"
     />
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-
   </head>
   <body>
     <header>
@@ -143,7 +148,11 @@
         >
           <i class="fab fa-linkedin"></i> LinkedIn
         </a>
-        <a href="https://github.com/babu-gudoori" target="_blank" title="GitHub">
+        <a
+          href="https://github.com/babu-gudoori"
+          target="_blank"
+          title="GitHub"
+        >
           <i class="fab fa-github"></i> GitHub
         </a>
       </div>
