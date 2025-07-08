@@ -28,6 +28,26 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   </head>
   <body>
+    <!-- Mobile View Warning Banner -->
+    <div
+      id="mobile-warning"
+      style="
+        display: none;
+        background-color: #ffcc00;
+        color: #000;
+        padding: 12px 16px;
+        text-align: center;
+        font-weight: 500;
+        font-size: 15px;
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 9999;
+      "
+    >
+      📱 Mobile view is coming soon. For the best experience, please switch to
+      Desktop Mode.
+    </div>
     <header>
       <!--<h1>📊 Data Analyst Dashboard Gallery</h1>-->
     </header>

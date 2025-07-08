@@ -147,3 +147,10 @@ function fullscreenIframe(id) {
     alert("❌ Fullscreen not supported in this browser.");
   }
 }
+
+// Show banner only on small screens (mobile/tablet)
+window.onload = function () {
+  if (window.innerWidth < 768) {
+    document.getElementById("mobile-warning").style.display = "block";
+  }
+};
