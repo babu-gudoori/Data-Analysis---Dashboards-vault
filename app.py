@@ -172,17 +172,14 @@ def add_dashboard():
 
     return redirect(url_for('admin'))
 
-@app.route('/delete_dashboard/<int:index>', methods=['POST'])
-def delete_dashboard(index):
+@app.route('/admin')
+def admin():
     if not session.get('admin'):
         return redirect(url_for('index'))
+    
+    dashboards = session.get('pending_dashboards', [])  # ✅ read from session only
+    return render_template('admin.html', dashboards=dashboards)
 
-    dashboards = session.get('pending_dashboards', [])
-    if 0 <= index < len(dashboards):
-        dashboards.pop(index)
-        session['pending_dashboards'] = dashboards
-
-    return redirect(url_for('admin'))
 
 @app.route('/save_changes', methods=['POST'])
 def save_changes():
